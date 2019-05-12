@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Meta -->
+  <meta name="description" content="XRP Address Generator is for users who want to have a special address which contains your favorite keyword. (Basically 2-3 letters)">
+  <meta name="keywords" content="XRP,address,secret,wallet,rippleAPI">
+  <meta name="title" content="XRP Address Generator">
+  <title>XRP Address Generator</title>
+  <link rel="icon" href="XRP.gif" type="image/gif" sizes="128x128">
+  <!-- Bootstrap -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <!-- RippleAPI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.js"></script>
+  <script src="https://github.com/ripple/ripple-lib/releases/download/1.2.3/ripple-1.2.3-min.js"></script>
+  <!-- Coil -->
+  <meta name="monetization" content="$coil.xrptipbot.com/-ZHX6fWhRn2uMXYGYzSSvw">
+  <style>
+  .navbar-brand {
+    background: url('XRP.gif') no-repeat left center;
+    background-size: contain;
+    width:  40px;
+    height: 40px;
+    text-indent: 50px;
+  }
+  .navbar-black {
+    background-color: black;
+  }
+  table {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+  }
+  td, th {
+    border: 1px solid #ddd;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+  }
+  th {
+    color: white;
+    background-color: black;
+  }
+  td {
+    color: black;
+    background-color: white;
+  }
+  .no {
+    text-align: center;
+    width: 2em;
+  }
+  .address {
+    text-align: center;
+    width: 20em;
+  }
+  .try {
+    text-align: center;
+    width: 3em;
+  }
+  .elapse {
+    text-align: center;
+    width: 6em;
+  }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-dark navbar-black">
+    <a class="navbar-brand" href="#">XRP Address Generator</a>
+  </nav>
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8">
+        <p style="margin-top: 2em;">XRP Address Generator is for users who want to have a special address which contains your favorite keyword. (Basically 2-3 letters)</p>
+        <form name="parameter">
+          <div class="row justify-content-center align-items-center">
+            <div class="col-5">
+              <select class="form-control" name="mode">
+                <option value="includes">includes</option>
+                <option value="startsWith">startsWith</option>
+                <option value="endsWith">endsWith</option>
+              </select>
+            </div>
+            <div class="col-5">
+              <input type="text" name="keyword" class="form-control"
+                placeholder="Keyword"
+                maxlength="5"
+                pattern="^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{1,5}"
+                oninput="javascript:validate()"
+                required>
+            </div>
+            <div class="col-2">
+              <button id="button"
+                type="button"
+                class="btn btn-primary"
+                onclick="javascript:toggleButton()" disabled>Start</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-8 justify-content-center align-items-center">
+        <hr/>
+        <table id="table">
+          <tr>
+            <th class="no">No</th>
+            <th class="address">Address</th>
+            <th class="try">Try</th>
+            <th class="elapse">Elapse</th>
+          </tr>
+        </table>
+      </div>
+    </div>
+    <div class="row justify-content-center align-items-center" style="margin-top:50px">
+      <div class="col-8">
+        <hr/>
+        <p>This page uses <a href="https://developers.ripple.com/rippleapi-reference.html" target="_blank">ripple-lib</a> generateAddress() function.
+        The generated adress and secret are no more than crypto-mathematical calculation result.</p>
+        <p>To activate an address as XRP Ledger account, you must send at least <a href="https://developers.ripple.com/accounts.html" target="_blank">20 XRP</a> to the address.
+        Please be careful in sending XRP to correct address, and make sure that you have the secret. You must do it at your own risk.</p>
+        <p>
+          Source code of this page is <a href="https://github.com/toshio/toshio.github.io/XRP/addressGenerator.html" target="_blank">here.</a>
+        </p>
+        <p>I am just a beginner of XRP programming and inspired by <a href="https://github.com/WietseWind/xrp-vanity-generator" target="_blank">https://github.com/WietseWind/xrp-vanity-generator</a>.</p>
+        <br/>
+        <p style="text-align:center; margin-top: 20px">Copyright©2019 <a href="https://coil.com/u/halifax" target="_blank">Halifax</a></p>
+      </div>
+    </div>
+  </div>
+  <script>
+  let done = false;
+  async function sleep(msec) {
+    return new Promise((resolve)=>{
+      setTimeout(()=>{
+        resolve();
+      }, msec);
+    })
+  }
+
+  /**
+   * Checks value and control button status
+   */
+  function validate() {
+    let button = document.getElementById('button');
+    let started = button.getAttribute('data-on') == 'true';
+    let enabled = started || document.forms.parameter.checkValidity();
+    button.disabled = !enabled;
+  }
+
+  function toggleButton() {
+    let button = document.getElementById('button');
+    let started = button.getAttribute('data-on') == 'true';
+    if (!started) {
+      if (!window.ripple) {
+        alert('Failed to load rippleAPI.');
+        return;
+      }
+      button.classList.remove('btn-primary');
+      button.classList.add('btn-danger');
+      button.textContent = 'Stop';
+      start();
+    } else {
+      button.classList.remove('btn-danger');
+      button.classList.add('btn-primary');
+      button.textContent = 'Start';
+      stop();
+    }
+    // Update Button staus
+    button.setAttribute('data-on', !started);
+  }
+
+  async function start() {
+    let keyword = document.forms.parameter.keyword.value;
+    let mode = document.forms.parameter.mode.value;
+    let func;
+    switch (mode) {
+    case 'includes':
+      func = String.prototype.includes;
+      break;
+    case 'startsWith':
+      func = String.prototype.startsWith;
+      break;
+    case 'endsWith':
+      func = String.prototype.endsWith;
+    }
+    let api = new ripple.RippleAPI();
+
+    // Clear All rows
+    clearTable();
+
+    let startTime = new Date().getTime();
+    let count = 0;
+    done = false;
+    while (!done) {
+      count++;
+      let account = api.generateAddress();
+      if (func.call(account.address, keyword)) {
+        if (!api.isValidAddress(account.address) ||
+            !api.isValidSecret(account.secret)) {
+          // It's not going to happen
+          continue;
+        }
+
+        let now = new Date().getTime();
+        let elapse = now - startTime;
+        addRow(account.address, account.secret, count, elapse, keyword);
+        // reset count and startTime
+        count = 0;
+        startTime = now;
+      }
+      await sleep(1);
+    }
+  }
+
+  function stop() {
+    done = true;
+  }
+
+  function clearTable() {
+    let table = document.getElementById('table');
+    for (i=table.rows.length-1; i>0; i--) {
+      table.deleteRow(i);
+    }
+  }
+
+  /**
+   *
+   */
+  function addRow(address, secret, count, elapse, keyword) {
+    let table = document.getElementById('table');
+    let row = table.insertRow(1);
+    row.innerHTML = `<td style="text-align:right">${table.rows.length - 1}</td>`
+                  + `<td style="text-align:left" ><a href="javascript:;" onclick="downloadCredentials(this)" data-secret="${secret}" data-keyword="${keyword}">${address}</a></td>`
+                  + `<td style="text-align:right">${count}</td>`
+                  + `<td style="text-align:right">${elapse} ms</td>`;
+  }
+
+  /**
+   * Download contains
+   */
+  function downloadCredentials(element) {
+    let address = element.textContent;
+    let secret  = element.getAttribute('data-secret');
+    let keyword = element.getAttribute('data-keyword');
+    download({address, secret}, `credential_${keyword}.json`);
+  }
+
+  /**
+    * Download data as file
+    */
+  async function download(obj, filename) {
+    let json = JSON.stringify(obj, null, 2);
+    let blob = new Blob([json], { type: 'application/json'});
+    let a = document.createElement('a');
+    a.href = window.URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }
+  </script>
+  <!-- Script for Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>
