@@ -158,11 +158,15 @@
       button.classList.remove('btn-primary');
       button.classList.add('btn-danger');
       button.textContent = 'Stop';
+      document.forms.parameter.keyword.disabled = true;
+      document.forms.parameter.mode.disabled = true;
       start();
     } else {
       button.classList.remove('btn-danger');
       button.classList.add('btn-primary');
       button.textContent = 'Start';
+      document.forms.parameter.keyword.disabled = false;
+      document.forms.parameter.mode.disabled = false;
       stop();
     }
     // Update Button staus
