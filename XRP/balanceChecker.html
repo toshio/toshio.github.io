@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Meta -->
+  <meta name="description" content="XRP Balance Checker">
+  <meta name="keywords" content="XRP,blance,rippleAPI">
+  <meta name="title" content="XRP Balance Checker">
+  <title>XRP Balance Checker</title>
+  <link rel="icon" href="XRP.gif" type="image/gif" sizes="128x128">
+  <!-- Bootstrap -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <!-- RippleAPI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.js"></script>
+  <script src="https://github.com/ripple/ripple-lib/releases/download/1.2.3/ripple-1.2.3-min.js"></script>
+  <!-- Coil -->
+  <meta name="monetization" content="$coil.xrptipbot.com/-ZHX6fWhRn2uMXYGYzSSvw">
+  <style>
+  .navbar-brand {
+    background: url('XRP.gif') no-repeat left center;
+    background-size: contain;
+    width:  40px;
+    height: 40px;
+    text-indent: 50px;
+  }
+  .navbar-black {
+    background-color: black;
+  }
+  table {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+  }
+  td, th {
+    border: 1px solid #ddd;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+  }
+  th {
+    color: white;
+    background-color: black;
+  }
+  td {
+    color: black;
+    background-color: white;
+  }
+  .no {
+    text-align: center;
+    width: 2em;
+  }
+  .address {
+    text-align: center;
+    width: 20em;
+  }
+  .balance {
+    text-align: center;
+    width: 8em;
+  }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-dark navbar-black">
+    <a class="navbar-brand" href="#">XRP Balance Checker</a>
+  </nav>
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8">
+        <p style="margin-top: 2em;">XRP Balance Checker is for users who want to query XRP balance of your addresses.</p>
+        <p>You can query up to 5 addresses.</p>
+        <form name="parameter">
+          <div class="row justify-content-center align-items-center">
+            <div class="col-8">
+              <input type="text" name="address" class="form-control"
+                placeholder="XRP Address"
+                minlength="25"
+                maxlength="35"
+                pattern="^r[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{24,34}"
+                oninput="javascript:validate()"
+                required>
+            </div>
+            <div class="col-4">
+              <button id="button"
+                type="button"
+                class="btn btn-primary"
+                onclick="javascript:query()" disabled>Query</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-8 justify-content-center align-items-center">
+        <hr/>
+        <table id="table">
+          <tr>
+            <th class="no">No</th>
+            <th class="address">Address</th>
+            <th class="balance">XRP Balance</th>
+          </tr>
+        </table>
+        <!-- Link for Page -->
+        <p class="text-right">
+          <a id="link" href="balanceChecker.html" target="_blank" style="display:none;">Link</a>
+        </p>
+      </div>
+    </div>
+    <div class="row justify-content-center align-items-center" style="margin-top:50px">
+      <div class="col-8">
+        <hr/>
+        <p>This page uses <a href="https://developers.ripple.com/rippleapi-reference.html" target="_blank">ripple-lib</a> getAccount() function.
+          Source code of this page is <a href="https://github.com/toshio/toshio.github.io/blob/master/XRP/balanceChecker.html" target="_blank">here.</a>
+        </p>
+        <br/>
+        <p style="text-align:center; margin-top: 20px">Copyright©2019 <a href="https://coil.com/u/halifax" target="_blank">Halifax</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let api = new ripple.RippleAPI({server:'wss://s1.ripple.com/'});
+
+    function getAddressesFromQueryString() {
+      let queryString = location.search;
+      let addresses = [];
+      if (queryString.startsWith('?')) {
+        for (let pair of queryString.substring(1).split('&')) {
+          let [key, value] = pair.split('=');
+          if (key == 'address' && api.isValidAddress(value)) {
+            addresses.push(decodeURIComponent(value));
+            // No accept more than 5 addresses
+            if (addresses.length > 5) {
+              break;
+            }
+          }
+        }
+      }
+      return addresses;
+    }
+
+    async function getAccounts(addresses) {
+      let accounts = [];
+      try {
+        await api.connect();
+        for (let address of addresses) {
+          let account = await api.getAccountInfo(address);
+          account.address = address;
+          accounts.push(account);
+        }
+      } catch (e) {
+        alert(e);
+      } finally {
+        await api.disconnect();
+      }
+      return accounts;
+    }
+
+    function addRow(account) {
+      let table = document.getElementById('table');
+      let row = table.insertRow();
+      row.innerHTML = `<td style="text-align:right">${table.rows.length - 1}</td>`
+                    + `<td style="text-align:left" >${account.address}</td>`
+                    + `<td style="text-align:right">${account.xrpBalance}</td>`;
+
+      // url
+      let link = document.getElementById('link');
+      let href = 'balanceChecker.html';
+      let separator = '?';
+      for (let i=1; i<table.rows.length; i++) {
+        let address = row.cells[1].textContent;
+        href += `${i==1?'?':'&'}address=${account.address}`;
+      }
+      link.style.display = 'inline';
+      link.href = href;
+    }
+
+    async function main() {
+      let addresses = getAddressesFromQueryString();
+      if (addresses.length > 0) {
+        let accounts = await getAccounts(addresses);
+        for (let account of accounts) {
+          addRow(account);
+        }
+      }
+    }
+
+    /**
+    * Checks value and control button status
+    */
+    function validate() {
+      let button = document.getElementById('button');
+      let enabled = document.forms.parameter.checkValidity() &&
+                    api.isValidAddress(document.forms.parameter.address.value);
+      button.disabled = !enabled;
+    }
+
+    async function query() {
+      document.getElementById('button').disabled = true;
+      document.forms.parameter.address.disabled = true;
+      try {
+        let [account] = await getAccounts([document.forms.parameter.address.value]);
+        addRow(account);
+      } finally {
+        document.forms.parameter.address.value = "";
+        let canQuery = document.getElementById('table').rows.length < 5;
+        document.forms.parameter.address.disabled = !canQuery;
+      }
+    }
+
+    main();
+  </script>
+
+  <!-- Script for Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </body>
+</html>
