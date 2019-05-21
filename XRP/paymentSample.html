@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Meta -->
+  <meta name="description" content="XRP Payment Sample">
+  <meta name="keywords" content="XRP,payment,rippleAPI">
+  <meta name="title" content="XRP Payment Sample">
+  <title>XRP Payment Sample</title>
+  <link rel="icon" href="XRP.gif" type="image/gif" sizes="128x128">
+  <!-- Bootstrap -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <!-- RippleAPI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.js"></script>
+  <script async src="https://github.com/ripple/ripple-lib/releases/download/1.2.3/ripple-1.2.3-min.js"></script>
+  <!-- Coil -->
+  <meta name="monetization" content="$coil.xrptipbot.com/-ZHX6fWhRn2uMXYGYzSSvw">
+  <style>
+  .navbar-brand {
+    background: url('XRP.gif') no-repeat left center;
+    background-size: contain;
+    width:  40px;
+    height: 40px;
+    text-indent: 50px;
+  }
+  .navbar-black {
+    background-color: black;
+  }
+  table {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+  }
+  td, th {
+    border: 1px solid #ddd;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+  }
+  th {
+    color: white;
+    background-color: black;
+  }
+  td {
+    color: black;
+    background-color: white;
+  }
+  .no {
+    text-align: center;
+    width: 2em;
+  }
+  .address {
+    text-align: center;
+    width: 20em;
+  }
+  .balance {
+    text-align: center;
+    width: 8em;
+  }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-dark navbar-black">
+    <a class="navbar-brand" href="#">XRP Payment Sample</a>
+  </nav>
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8">
+        <p style="margin-top: 2em;">This is a sample for XRP payment.
+          This page uses <a href="https://developers.ripple.com/rippleapi-reference.html" target="_blank">ripple-lib</a>,
+          and source code is <a href="https://github.com/toshio/toshio.github.io/blob/master/XRP/paymentSample.html" target="_blank">here</a>.
+          Although the specified secret is for signing transaction only, it's better not to use your main address and its secret.
+        </p>
+
+        <form name="parameter">
+          <div class="row">
+            <div class="col-7 form-group">
+              <select name="server" class="form-control" onchange="serverChanged();">
+                <option value="wss://s.altnet.rippletest.net:51233" selected>TestNet (wss://s.altnet.rippletest.net:51233)</option>
+                <option value="wss://s1.ripple.com/">MainNet (wss://s1.ripple.com/)</option>
+              </select>
+            </div>
+            <div class="col-8 form-group">
+              <input type="text" name="address" class="form-control"
+                  placeholder="XRP Address"
+                  minlength="25"
+                  maxlength="35"
+                  pattern="^r[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{24,34}"
+                  oninput="javascript:validate()"
+                  required>
+            </div>
+            <div class="col-4 form-group">
+              <button id="button"
+              title="1XRP to 'rfAXNh8ZvTj9ikzyGxFqBfjjjoMn7w2XRP'"
+              type="button"
+                class="btn btn-primary"
+                onclick="javascript:tipXRP()" disabled>Tip 1XRP</button>
+            </div>
+            <div class="col-8 form-group">
+              <input type="password" name="secret" class="form-control"
+                placeholder="Secret"
+                oninput="javascript:validate()"
+                required>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="col-8 justify-content-center align-items-center">
+        <div style="width:300px;height:250px">
+          <iframe id="microbit"
+            style="top:0;left:0;width:100%;height:100%;"
+            src="about:blank"
+            sandbox="allow-popups allow-forms allow-scripts allow-same-origin"
+            frameborder="0">
+          </iframe>
+        </div>
+      </div>
+    </div>
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8">
+        <p style="text-align:center">Copyright©2019 <a href="https://coil.com/u/halifax" target="_blank">Halifax</a></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    let api;
+
+    /**
+     * Server changed
+     */
+    function serverChanged() {
+      api = null;
+      validate();
+    }
+
+    /**
+    * Checks value and control button status
+    */
+    function validate() {
+      let button = document.getElementById('button');
+      let enabled;
+      if (window.ripple) {
+        if (!api) {
+          let server = document.forms.parameter.server.value;
+          api = new ripple.RippleAPI({server});
+        }
+        enabled = document.forms.parameter.checkValidity() &&
+                  api.isValidAddress(document.forms.parameter.address.value) &&
+                  api.isValidSecret(document.forms.parameter.secret.value);
+      } else {
+        enabled = false;
+      }
+      button.disabled = !enabled;
+    }
+
+    /**
+     * changes status of form widgets
+     */
+    function setEnabled(enabled) {
+      for (let element of document.forms.parameter.elements) {
+        element.disabled = !enabled;
+      }
+    }
+
+    /**
+     * sends a tip
+     */
+    async function tipXRP() {
+      // Disable forms
+      setEnabled(false);
+
+      try {
+        let addressFrom = document.forms.parameter.address.value;
+        let secret = document.forms.parameter.secret.value;
+        let addressTo = 'rfAXNh8ZvTj9ikzyGxFqBfjjjoMn7w2XRP';
+        let amount = '1.000000';
+        let result = await pay(addressFrom, secret, addressTo, amount);
+
+        if (result && result.engine_result_code == 0) {
+          // Transaction Success
+          let iframe = document.getElementById('microbit');
+          iframe.src = 'https://makecode.microbit.org/---run#nofooter=1&amp;code=basic.showString(%22ThankYou%22)';
+        } else {
+          alert(result.resultMessage);
+        }
+      } catch (e) {
+        alert(e);
+
+      } finally {
+        // Enable widgets (delay 3 sec)
+        setTimeout(()=>setEnabled(true), 3000);
+      }
+    }
+
+    /**
+     * payment transaction
+     */
+     async function pay(addressFrom, secret, addressTo, amount) {
+      try {
+        await api.connect();
+
+        let payment = {
+          source: {
+            address: addressFrom,
+            maxAmount: {
+              value: amount,
+              currency: 'XRP'
+            }
+          },
+          destination: {
+            address: addressTo,
+            amount: {
+              value: amount,
+              currency: 'XRP'
+            }
+          }
+        };
+        let prepared = await api.preparePayment(addressFrom, payment, {
+          maxLedgerVersionOffset: 5
+        });
+        const {signedTransaction} = api.sign(prepared.txJSON, secret);
+
+        return await api.submit(signedTransaction);
+
+      } finally {
+        await api.disconnect();
+      }
+    }
+  </script>
+
+  <!-- Script for Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+  </body>
+</html>
