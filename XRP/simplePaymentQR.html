@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Meta -->
+  <meta name="description" content="XRP Payment Request">
+  <meta name="keywords" content="XRP,payment,QRCode">
+  <meta name="title" content="XRP Payment Request">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.3.3/build/qrcode.min.js"></script>
+  <title>XRP Simple Payment QR</title>
+  <link rel="icon" href="XRP.gif" type="image/gif" sizes="128x128">
+  <!-- Bootstrap -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+  <!-- RippleAPI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.11/lodash.js"></script>
+  <script async src="https://github.com/ripple/ripple-lib/releases/download/1.2.3/ripple-1.2.3-min.js" onload="validate();"></script>
+  <!-- Coil -->
+  <meta name="monetization" content="$coil.xrptipbot.com/-ZHX6fWhRn2uMXYGYzSSvw">
+  <style>
+  .navbar-brand {
+    background: url('XRP.gif') no-repeat left center;
+    background-size: contain;
+    width:  40px;
+    height: 40px;
+    text-indent: 50px;
+  }
+  .navbar-black {
+    background-color: black;
+  }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-md navbar-dark navbar-black">
+    <a class="navbar-brand" href="#">XRP Simple Payment QR</a>
+  </nav>
+  <div class="container">
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8">
+        <p style="margin-top: 2em;">This is a sample for XRP payment with QR Code.</p>
+        <p>According to the <a href="https://github.com/xrp-community/standards-drafts/issues/3" target="_blank">XLS-2d Standard</a>,
+          some XRP wallets such as <a href="https://toastwallet.com/" target="_blank">ToastWallet</a> accepts 'XRPL' URL scheme.
+          So, the wallet will be invoked by scanning QR Code starting with 'xrpl://'.</p>
+        </p>
+        <p>
+          This sample displays QR Code for payment only.  The checking of the payment completion is not implemented in this sample.
+        </p>
+        <p>
+          This page uses <a href="https://developers.ripple.com/rippleapi-reference.html" target="_blank">ripple-lib</a> to validate XRP Address,
+          and <a href="https://www.npmjs.com/package/qrcode" target="_blank">qrcode</a> package to create payment URL.
+        </p>
+        <p>
+          The source code of the page is <a href="https://github.com/toshio/toshio.github.io/blob/master/XRP/simplePaymentQR.html" target="_blank">here</a>.
+        </p>
+        <form name="parameter">
+          <div class="row">
+            <div class="col-12">
+                Specify receiver's XRP address and amount (0.01 - 10.00)
+            </div>
+            <div class="col-9 form-group">
+              <input type="text" name="address" class="form-control"
+                  value="rfAXNh8ZvTj9ikzyGxFqBfjjjoMn7w2XRP"
+                  placeholder="XRP Address"
+                  minlength="25"
+                  maxlength="35"
+                  pattern="^r[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{24,34}"
+                  oninput="javascript:validate()"
+                  required>
+            </div>
+            <div class="col-3 form-group">
+              <input type="number" name="tag" class="form-control"
+                  value=""
+                  placeholder="Tag"
+                  oninput="javascript:validate()">
+            </div>
+            <div class="col-4 form-group">
+              <input type="number" name="amount" class="form-control"
+                  placeholder="Amount"
+                  step="0.01"
+                  min="0.01"
+                  max="10.00"
+                  value="1.00"
+                  oninput="javascript:validate()"
+                  required>
+            </div>
+            <div class="col-3 form-group">
+              <button id="button"
+                title="Display QR Code"
+                type="button"
+                class="btn btn-primary"
+                onclick="javascript:requestPayment()" disabled>QR</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="row justify-content-center align-items-center">
+      <div class="col-8" style="margin-top: 2em;">
+        <p style="text-align:center">Copyright©2019 <a href="https://coil.com/u/halifax" target="_blank">Halifax</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="dialogQR" tabindex="-1" role="dialog" aria-labelledby="titleQR" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="titleQR">QR Code for XRP</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body mx-auto text-center">
+          <p id="qrstring" style="font-size: 0.8em"></p>
+          <canvas id="qrcode"></canvas>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let api;
+
+    /**
+    * Checks value and control button status
+    */
+    function validate() {
+      let button = document.getElementById('button');
+      let enabled;
+      if (window.ripple) {
+        if (!api) {
+          api = new ripple.RippleAPI();
+        }
+        enabled = document.forms.parameter.checkValidity() &&
+                  api.isValidAddress(document.forms.parameter.address.value);
+      } else {
+        enabled = false;
+      }
+      button.disabled = !enabled;
+    }
+
+    function requestPayment() {
+      let addressTo = document.forms.parameter.address.value;
+      let tag = document.forms.parameter.tag.value;
+      let amount = document.forms.parameter.amount.value;
+      let url;
+      if (tag === '') {
+       url = `xrpl://to=${addressTo}&amount=${amount}`;
+      } else {
+        url = `xrpl://to=${addressTo}&dt=${tag}&amount=${amount}`;
+      }
+      QRCode.toCanvas(document.getElementById('qrcode'), url, (error)=>{
+        let qrstring = document.getElementById('qrstring');
+        qrstring.textContent = url;
+        // Open dialog
+        $('#dialogQR').modal();
+      });
+    }
+  </script> 
+  <!-- Script for Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>
