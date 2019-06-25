@@ -167,8 +167,8 @@
       let href = 'balanceChecker.html';
       let separator = '?';
       for (let i=1; i<table.rows.length; i++) {
-        let address = row.cells[1].textContent;
-        href += `${i==1?'?':'&'}address=${account.address}`;
+        let address = table.rows[i].cells[1].textContent;
+        href += `${i==1?'?':'&'}address=${address}`;
       }
       link.style.display = 'inline';
       link.href = href;
